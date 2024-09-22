@@ -19,6 +19,6 @@ public record Contact(String name, String phoneNumber) implements Serializable {
 
     @Override
     public String toString() {
-        return name + " " + phoneNumber;
+        return name + ": " + phoneNumber;
     }
 }

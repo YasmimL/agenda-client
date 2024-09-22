@@ -13,6 +13,8 @@ public interface AgendaService extends Remote {
         return "AgendaService";
     }
 
+    String checkConnection() throws RemoteException;
+
     void add(Contact contact) throws RemoteException;
 
     void remove(Contact contact) throws RemoteException;

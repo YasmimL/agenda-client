@@ -1,57 +1,79 @@
 package br.com.ifce.network.rmi;
 
+import br.com.ifce.mediator.AgendaMediator;
 import br.com.ifce.model.Agenda;
 
 import java.net.MalformedURLException;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.util.Collections;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class SyncService {
 
-    private Agenda agenda;
-
-    private static final SyncService INSTANCE = new SyncService();
-
-    public static SyncService getInstance() {
-        return INSTANCE;
-    }
+    private static final int TIMER_INTERVAL = 2000;
 
     private SyncService() {
-
     }
 
-    private AgendaService lookupService(Agenda agenda) throws MalformedURLException, NotBoundException {
-        try {
-            return (AgendaService) Naming.lookup(agenda + "/" + AgendaService.name());
-        } catch (RemoteException e) {
-            return null;
-        }
+    private static AgendaService lookupService(Agenda agenda) throws MalformedURLException, NotBoundException, RemoteException {
+        return (AgendaService) Naming.lookup(agenda + "/" + AgendaService.name());
     }
 
-    public AgendaService getRemoteService() {
+    public static boolean checkConnection(final Agenda agenda) {
         try {
-            AgendaService service = this.lookupService(this.agenda);
-            while (service == null) {
-                for (var agenda : Agenda.getAllExcept(this.agenda)) {
-                    service = this.lookupService(agenda);
-                    if (service != null) break;
-                }
-                break;
-            }
-
-            return service;
+            final var service = lookupService(agenda);
+            return "OK".equals(service.checkConnection());
         } catch (Exception e) {
             e.printStackTrace();
-            throw new RuntimeException(e);
+            return false;
         }
     }
 
-    public Agenda getAgenda() {
-        return agenda;
+    public static AgendaService getRemoteService() throws RemoteException {
+        try {
+            final var agenda = AgendaMediator.getInstance().getAgenda();
+            if (!checkConnection(agenda)) throw new RemoteException("Can't connect to agenda");
+            return lookupService(agenda);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RemoteException("Can't connect to agenda");
+        }
     }
 
-    public void setAgenda(Agenda agenda) {
-        this.agenda = agenda;
+    public static Agenda getAvailableAgenda() {
+        final var agendas = Agenda.getAll();
+        Collections.shuffle(agendas);
+
+        return agendas.stream()
+            .filter(SyncService::checkConnection)
+            .findFirst()
+            .orElse(null);
+    }
+
+    private static TimerTask syncAgendaTask() {
+        return new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    final var repo = AgendaMediator.getInstance();
+                    if (repo.getAgenda() == null || !checkConnection(repo.getAgenda())) {
+                        repo.setAgenda(SyncService.getAvailableAgenda());
+                        if (repo.getAgenda() == null) return;
+                    }
+                    final var remoteService = SyncService.getRemoteService();
+                    AgendaMediator.getInstance().updateAgenda(remoteService.getAll());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+    }
+
+    public static void periodicallyUpdateAgenda() {
+        final var timer = new Timer();
+        timer.scheduleAtFixedRate(syncAgendaTask(), 0, TIMER_INTERVAL);
     }
 }

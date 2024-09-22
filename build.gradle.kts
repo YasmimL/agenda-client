@@ -1,5 +1,16 @@
 plugins {
     id("java")
+    application
+}
+
+application {
+    mainClass.set("br.com.ifce.Main")
+}
+
+tasks.jar {
+    manifest {
+        attributes(mapOf("Main-Class" to application.mainClass))
+    }
 }
 
 group = "br.com.ifce"

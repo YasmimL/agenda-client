@@ -33,7 +33,7 @@ public class AgendaMediator {
         if (this.listener != null) this.listener.onAgendaChange(agenda);
     }
 
-    public void updateAgenda(List<Contact> contacts) {
+    public void updateContacts(List<Contact> contacts) {
         if (this.listener != null) this.listener.onContactsChange(contacts);
     }
 }

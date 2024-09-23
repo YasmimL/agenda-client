@@ -58,13 +58,13 @@ public class SyncService {
             @Override
             public void run() {
                 try {
-                    final var repo = AgendaMediator.getInstance();
-                    if (repo.getAgenda() == null || !checkConnection(repo.getAgenda())) {
-                        repo.setAgenda(SyncService.getAvailableAgenda());
-                        if (repo.getAgenda() == null) return;
+                    final var mediator = AgendaMediator.getInstance();
+                    if (mediator.getAgenda() == null || !checkConnection(mediator.getAgenda())) {
+                        mediator.setAgenda(SyncService.getAvailableAgenda());
+                        if (mediator.getAgenda() == null) return;
                     }
                     final var remoteService = SyncService.getRemoteService();
-                    AgendaMediator.getInstance().updateAgenda(remoteService.getAll());
+                    mediator.updateContacts(remoteService.getAll());
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
